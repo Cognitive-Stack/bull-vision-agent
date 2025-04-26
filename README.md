@@ -1,6 +1,15 @@
 # Bull Vision Agent
 
-A FastAPI application that integrates with Telegram using webhooks.
+A FastAPI application that integrates with Telegram using webhooks and OpenAI Agents SDK for AI-powered stock trading assistance.
+
+## Features
+
+- Telegram bot integration with webhook support
+- AI-powered stock analysis using OpenAI Agents SDK
+- Real-time stock data using yfinance
+- Market news integration
+- Conversation history tracking
+- Trading context management
 
 ## Setup
 
@@ -24,7 +33,7 @@ A FastAPI application that integrates with Telegram using webhooks.
 
 Start the server:
 ```bash
-poetry run uvicorn app.main:app --host $HOST --port $PORT
+make run
 ```
 
 ## Webhook Setup
@@ -37,6 +46,13 @@ poetry run uvicorn app.main:app --host $HOST --port $PORT
 
 - `/start` - Start the bot
 - `/help` - Show help message
+
+## Example Queries
+
+You can ask the bot about:
+- Stock analysis (e.g., "Analyze AAPL")
+- Market news (e.g., "What's the latest news about Tesla?")
+- Trading strategies (e.g., "What's your view on the current market?")
 
 ## Development
 
@@ -52,5 +68,25 @@ The project structure is organized as follows:
 │   └── startup.py        # Startup events: register Telegram webhook URL
 ├── bot/
 │   ├── __init__.py
+│   ├── bot.py            # Bot instance and context management
+│   ├── agent.py          # Bull Vision agent implementation
+│   ├── context.py        # Trading context and message history
 │   └── telegram_handler.py  # Process incoming messages
-``` 
+```
+
+## Development Commands
+
+```bash
+make install    # Install dependencies
+make run       # Run the application
+make test      # Run tests
+make lint      # Run linters
+make format    # Format the code
+make clean     # Clean up generated files
+make setup     # Setup development environment
+make check     # Run all checks
+```
+
+## Documentation
+
+For detailed instructions on setting up the AI Chatbot with Telegram and OpenAI Agents SDK, see [init_telegram_openai_agent.md](init_telegram_openai_agent.md). 
