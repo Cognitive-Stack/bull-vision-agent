@@ -1,25 +1,26 @@
-import logging
+import re
+
 from agents import Runner
+from loguru import logger
 from telegram import Update
+from telegram.constants import ParseMode
+
+# from bot.agent import BullVisionAgent
 from bot.bot import bot, get_user_context
-from bot.agent import bull_vision_agent
+from bot.agent import run_with_server
 
-logger = logging.getLogger(__name__)
 
-async def handle_telegram_update(update_data: dict):
-    """Process incoming Telegram updates"""
+async def handle_telegram_update(update_data: dict, server):
+    """Handle incoming Telegram updates"""
     try:
         # Create Update object from the webhook data
         update = Update.de_json(update_data, bot)
-        
+        logger.info(f"Received Telegram update: {update}")
         if update.message:
-            # Handle commands
             if update.message.text and update.message.text.startswith('/'):
                 await handle_command(update)
-            # Handle regular messages
             else:
-                await handle_message(update)
-                
+                await handle_message(update, server)
     except Exception as e:
         logger.error(f"Error handling Telegram update: {str(e)}")
 
@@ -28,34 +29,42 @@ async def handle_command(update: Update):
     command = update.message.text.split()[0].lower()
     
     if command == '/start':
-        await update.message.reply_text("Welcome to Bull Vision Agent! How can I help you today?")
+        await update.message.reply_text(
+            "Welcome to Bull Vision! I'm your AI-powered trading assistant. "
+            "I can help you analyze stocks, provide market insights, and suggest trading strategies. "
+            "How can I help you today?"
+        )
     elif command == '/help':
-        await update.message.reply_text("""
-Available commands:
-/start - Start the bot
-/help - Show this help message
+        await update.message.reply_text(
+            "Available commands:\n"
+            "/start - Start the bot\n"
+            "/help - Show this help message\n\n"
+            "You can ask me about:\n"
+            "- Stock analysis and technical indicators\n"
+            "- Market news and trends\n"
+            "- Trading strategies and risk management\n"
+            "- Portfolio optimization\n"
+            "- Market sentiment analysis"
+        )
 
-You can ask me about:
-- Stock analysis (e.g., "Analyze AAPL")
-- Market news (e.g., "What's the latest news about Tesla?")
-- Trading strategies (e.g., "What's your view on the current market?")
-""")
+def escape_markdown(text: str) -> str:
+    escape_chars = r'_*[]()~`>#+-=|{}.!'
+    return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
 
-async def handle_message(update: Update):
+async def handle_message(update: Update, server):
     """Handle regular messages using the Bull Vision agent"""
     try:
         # Get or create user context
         user_context = await get_user_context(update.message.from_user.id)
-        logger.info(f"User context: {user_context}")
-        print(f"User context: {user_context}")
+        
         # Add user message to context
         user_context.add_message('user', update.message.text)
         
-        # Run the agent with the context
-        result = await Runner.run(
-            starting_agent=bull_vision_agent,
-            input=update.message.text,
-            context=user_context
+        # Run with the provided server
+        result = await run_with_server(
+            update.message.text,
+            user_context,
+            server
         )
         
         # Get the agent's response
@@ -63,10 +72,17 @@ async def handle_message(update: Update):
         
         # Add bot's response to context
         user_context.add_message('bot', response)
+        logger.info(f"User context messages:\n{user_context.get_conversation_history()}")
         
         # Send the response back to the user
-        await update.message.reply_text(response)
+        await update.message.reply_text(
+            response,
+            parse_mode=ParseMode.MARKDOWN
+        )
         
     except Exception as e:
         logger.error(f"Error in handle_message: {str(e)}")
-        await update.message.reply_text("I'm sorry, I encountered an error while processing your request. Please try again later.") 
+        await update.message.reply_text(
+            "I'm sorry, I encountered an error while processing your request. "
+            "Please try again later or contact support if the issue persists."
+        ) 

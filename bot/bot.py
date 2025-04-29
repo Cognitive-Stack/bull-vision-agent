@@ -1,11 +1,10 @@
 import os
-import logging
-from telegram import Bot
-from dotenv import load_dotenv
 from datetime import datetime
-from bot.context import TradingContext
 
-logger = logging.getLogger(__name__)
+from dotenv import load_dotenv
+from telegram import Bot
+
+from bot.context import TradingContext
 
 # Load environment variables
 load_dotenv()
