@@ -79,3 +79,6 @@ test-results/
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/ 
+
+# MCP Hub
+.mcphub.json

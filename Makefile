@@ -14,7 +14,7 @@ PORT ?= 8000
 
 # Install dependencies
 install:
-	rm poetry.lock && poetry install --no-cache --no-interaction --no-root
+	rm -f poetry.lock && poetry install --no-cache --no-interaction --no-root
 
 # Run the application
 run:
