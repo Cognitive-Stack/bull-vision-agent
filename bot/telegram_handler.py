@@ -1,3 +1,4 @@
+import json
 import re
 
 from agents import Runner
@@ -8,9 +9,9 @@ from telegram.constants import ParseMode
 # from bot.agent import BullVisionAgent
 from bot.bot import bot, get_user_context
 from bot.agent import run_with_server
+from controllers import news_controller
 
-
-async def handle_telegram_update(update_data: dict, server):
+async def handle_telegram_update(update_data: dict, server, db):
     """Handle incoming Telegram updates"""
     try:
         # Create Update object from the webhook data
@@ -20,7 +21,7 @@ async def handle_telegram_update(update_data: dict, server):
             if update.message.text and update.message.text.startswith('/'):
                 await handle_command(update)
             else:
-                await handle_message(update, server)
+                await handle_message(update, server, db)
     except Exception as e:
         logger.error(f"Error handling Telegram update: {str(e)}")
 
@@ -51,7 +52,7 @@ def escape_markdown(text: str) -> str:
     escape_chars = r'_*[]()~`>#+-=|{}.!'
     return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
 
-async def handle_message(update: Update, server):
+async def handle_message(update: Update, server, db):
     """Handle regular messages using the Bull Vision agent"""
     try:
         # Get or create user context
@@ -69,10 +70,13 @@ async def handle_message(update: Update, server):
         
         # Get the agent's response
         response = result.final_output
-        
+        logger.info(f"Response: {response}")
+        tool_call_output_item = next((item for item in result.new_items if item.type == 'tool_call_output_item'), None)
+        if tool_call_output_item:
+            await news_controller.store_fetched_news(tool_call_output_item, db)
         # Add bot's response to context
         user_context.add_message('bot', response)
-        logger.info(f"User context messages:\n{user_context.get_conversation_history()}")
+        # logger.info(f"User context messages:\n{user_context.get_conversation_history()}")
         
         # Send the response back to the user
         await update.message.reply_text(
