@@ -1,8 +1,11 @@
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 from app.schemas.base import BaseRequest, BaseResponse
+
 
 class TelegramWebhookRequest(BaseRequest):
     """Schema for Telegram webhook request"""
+
     update_id: int
     message: Optional[Dict[str, Any]] = None
     edited_message: Optional[Dict[str, Any]] = None
@@ -16,6 +19,8 @@ class TelegramWebhookRequest(BaseRequest):
     poll: Optional[Dict[str, Any]] = None
     poll_answer: Optional[Dict[str, Any]] = None
 
+
 class TelegramWebhookResponse(BaseResponse):
     """Schema for Telegram webhook response"""
-    data: Optional[Dict[str, Any]] = None 
+
+    data: Optional[Dict[str, Any]] = None

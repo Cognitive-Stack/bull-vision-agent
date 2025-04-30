@@ -1,5 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from models.news import NewsArticle
+
+from app.models.news import NewsArticle
+
 
 async def insert_news_if_new(db: AsyncIOMotorDatabase, article: NewsArticle) -> bool:
     """Insert news article if not already present (by URL). Returns True if inserted."""
@@ -7,4 +9,4 @@ async def insert_news_if_new(db: AsyncIOMotorDatabase, article: NewsArticle) -> 
     if not existing:
         await db.news.insert_one(article.model_dump())
         return True
-    return False 
+    return False

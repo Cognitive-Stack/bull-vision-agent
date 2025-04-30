@@ -1,15 +1,18 @@
-from fastapi import FastAPI, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from app.api.telegram_webhook import router as telegram_router
-from app.startup import startup_event
-from mcphub import MCPHub
 from contextlib import asynccontextmanager
+
+from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from mcphub import MCPHub
 from motor.motor_asyncio import AsyncIOMotorClient
-from core.settings import get_settings
+
+from app.api.telegram_webhook import router as telegram_router
+from app.core.settings import get_settings
+from app.startup import startup_event
 
 # Initialize MCPHub
 hub = MCPHub()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,12 +27,11 @@ async def lifespan(app: FastAPI):
 
         # Create and maintain MCP server connection
         async with hub.fetch_openai_mcp_server(
-            mcp_name="search-stock-news",
-            cache_tools_list=True
+            mcp_name="search-stock-news", cache_tools_list=True
         ) as server:
             app.state.mcp_server = server
             logger.info("MCP server initialized")
-            
+
             # Initialize other components
             await startup_event()
             yield
@@ -45,10 +47,8 @@ async def lifespan(app: FastAPI):
         if mongo_client:
             mongo_client.close()
 
-app = FastAPI(
-    title="Bull Vision Agent",
-    lifespan=lifespan
-)
+
+app = FastAPI(title="Bull Vision Agent", lifespan=lifespan)
 
 # Configure CORS
 app.add_middleware(
@@ -60,4 +60,4 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(telegram_router, prefix="/api", tags=["telegram"]) 
+app.include_router(telegram_router, prefix="/api", tags=["telegram"])

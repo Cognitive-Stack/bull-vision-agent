@@ -12,7 +12,7 @@ from loguru import logger
 from mcphub import MCPHub
 from openai import AsyncAzureOpenAI
 
-from bot.context import TradingContext
+from app.bot.context import TradingContext
 
 set_tracing_disabled(disabled=True)
 load_dotenv()
@@ -27,10 +27,11 @@ openai_client = AsyncAzureOpenAI(
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
 )
 
 set_default_openai_client(openai_client)
+
 
 async def create_bull_vision_agent(server):
     """Create the Bull Vision agent with MCP server integration"""
@@ -91,14 +92,11 @@ async def create_bull_vision_agent(server):
             model=deployment,
             openai_client=openai_client,
         ),
-        mcp_servers=mcp_servers
+        mcp_servers=mcp_servers,
     )
+
 
 async def run_with_server(input_text: str, context: TradingContext, server):
     """Run the agent with the provided server"""
     agent = await create_bull_vision_agent(server)
-    return await Runner.run(
-        starting_agent=agent,
-        input=input_text,
-        context=context
-    )
+    return await Runner.run(starting_agent=agent, input=input_text, context=context)

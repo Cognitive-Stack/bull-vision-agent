@@ -1,6 +1,8 @@
-from pydantic import BaseModel, HttpUrl, Field
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, Field, HttpUrl
+
 
 class NewsArticle(BaseModel):
     title: str
@@ -11,4 +13,4 @@ class NewsArticle(BaseModel):
     summary: Optional[str] = None
     source: Optional[str] = None
     notified: bool = False
-    created_at: datetime = Field(default_factory=datetime.now) 
+    created_at: datetime = Field(default_factory=datetime.now)

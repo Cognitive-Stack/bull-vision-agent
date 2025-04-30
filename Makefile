@@ -26,13 +26,13 @@ test:
 
 # Lint the code
 lint:
-	$(FLAKE8) app/ bot/ tests/
-	$(MYPY) app/ bot/ tests/
+	$(FLAKE8) app/
+	$(MYPY) app/
 
 # Format the code
 format:
-	$(BLACK) app/ bot/ tests/
-	$(ISORT) app/ bot/ tests/
+	$(BLACK) app/
+	$(ISORT) app/
 
 # Clean up
 clean:

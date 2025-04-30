@@ -1,6 +1,7 @@
 import os
 from functools import lru_cache
 
+
 class Settings:
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
     MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
@@ -21,6 +22,7 @@ class Settings:
         else:
             return f"mongodb://{self.MONGO_HOST}:{self.MONGO_PORT}/{self.MONGO_DB}"
 
+
 @lru_cache()
 def get_settings():
-    return Settings() 
+    return Settings()

@@ -1,1 +1,1 @@
-"""Bull Vision Agent application package.""" 
+"""Bull Vision Agent application package."""
