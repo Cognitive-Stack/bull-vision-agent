@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 async def get_mcp_server(request: Request):
-    return request.app.state.mcp_server
+    return request.app.state.mcp_servers
 
 
 async def get_mongo_db(request: Request):
@@ -17,13 +17,13 @@ async def get_mongo_db(request: Request):
 
 @router.post("/telegram/webhook", response_model=TelegramWebhookResponse)
 async def telegram_webhook(
-    request: Request, server=Depends(get_mcp_server), db=Depends(get_mongo_db)
+    request: Request, servers=Depends(get_mcp_server), db=Depends(get_mongo_db)
 ):
     try:
         update = await request.json()
         # Validate request data
         webhook_request = TelegramWebhookRequest(**update)
-        await handle_telegram_update(update, server, db)
+        await handle_telegram_update(update, servers, db)
         return TelegramWebhookResponse(
             message="Webhook processed successfully",
             data={"update_id": webhook_request.update_id},

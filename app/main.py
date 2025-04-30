@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI):
         # Create and maintain MCP server connection
         async with hub.fetch_openai_mcp_server(
             mcp_name="search-stock-news", cache_tools_list=True
-        ) as server:
-            app.state.mcp_server = server
+        ) as search_stock_news_mcp, hub.fetch_openai_mcp_server(mcp_name="volume-wall-detector", cache_tools_list=True) as volume_wall_detector_mcp:
+            app.state.mcp_servers = [search_stock_news_mcp, volume_wall_detector_mcp]
             logger.info("MCP server initialized")
 
             # Initialize other components

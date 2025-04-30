@@ -13,7 +13,7 @@ from app.bot.bot import bot, get_user_context
 from app.controllers import news_controller
 
 
-async def handle_telegram_update(update_data: dict, server, db):
+async def handle_telegram_update(update_data: dict, servers, db):
     """Handle incoming Telegram updates"""
     try:
         # Create Update object from the webhook data
@@ -23,7 +23,7 @@ async def handle_telegram_update(update_data: dict, server, db):
             if update.message.text and update.message.text.startswith("/"):
                 await handle_command(update)
             else:
-                await handle_message(update, server, db)
+                await handle_message(update, servers, db)
     except Exception as e:
         logger.error(f"Error handling Telegram update: {str(e)}")
 
@@ -57,7 +57,7 @@ def escape_markdown(text: str) -> str:
     return re.sub(f"([{re.escape(escape_chars)}])", r"\\\1", text)
 
 
-async def handle_message(update: Update, server, db):
+async def handle_message(update: Update, servers, db):
     """Handle regular messages using the Bull Vision agent"""
     try:
         # Get or create user context
@@ -67,15 +67,27 @@ async def handle_message(update: Update, server, db):
         user_context.add_message("user", update.message.text)
 
         # Run with the provided server
-        result = await run_with_server(update.message.text, user_context, server)
+        result = await run_with_server(update.message.text, user_context, servers)
 
         # Get the agent's response
         response = result.final_output
         logger.info(f"Response: {response}")
-        tool_call_output_item = next(
-            (item for item in result.new_items if item.type == "tool_call_output_item"),
-            None,
+        # Find the search-stock-news tool call item
+        tool_call_search_stock_news = next(
+            (item for item in result.new_items 
+             if item.type == "tool_call_item" and item.raw_item.name == "search-stock-news"),
+            None
         )
+
+        # Find matching tool call output item with same call_id
+        tool_call_output_item = None
+        if tool_call_search_stock_news:
+            tool_call_output_item = next(
+                (item for item in result.new_items 
+                 if item.type == "tool_call_output_item" 
+                 and item.raw_item.get('call_id', None) == tool_call_search_stock_news.raw_item.call_id),
+                None
+            )
         if tool_call_output_item:
             await news_controller.store_fetched_news(tool_call_output_item, db)
         # Add bot's response to context
