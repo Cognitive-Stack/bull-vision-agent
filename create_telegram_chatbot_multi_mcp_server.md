@@ -27,22 +27,22 @@ We'll build a trading bot with these features:
 │   ├── api/
 │   │   ├── __init__.py
 │   │   └── telegram_webhook.py  # Telegram webhook endpoint
+│   ├── bot/
+│   │   ├── __init__.py
+│   │   ├── bot.py            # Bot instance and context management
+│   │   ├── agent.py          # AI agent implementation with MCP servers
+│   │   ├── context.py        # Conversation context and history
+│   │   └── telegram_handler.py  # Process incoming messages
 │   ├── core/
 │   │   ├── __init__.py
 │   │   └── settings.py   # Application settings
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── news.py           # News data models
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── mongodb_service.py # MongoDB operations
 │   └── startup.py        # Startup events
-├── bot/
-│   ├── __init__.py
-│   ├── bot.py            # Bot instance and context management
-│   ├── agent.py          # AI agent implementation with MCP servers
-│   ├── context.py        # Conversation context and history
-│   └── telegram_handler.py  # Process incoming messages
-├── models/
-│   ├── __init__.py
-│   └── news.py           # News data models
-└── services/
-    ├── __init__.py
-    └── mongodb_service.py # MongoDB operations
 ```
 
 ## Step 1: Initialize MCPHub and FastAPI Application

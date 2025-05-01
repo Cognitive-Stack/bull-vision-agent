@@ -1,15 +1,46 @@
 # Bull Vision Agent
 
-A FastAPI application that integrates with Telegram using webhooks and OpenAI Agents SDK for AI-powered stock trading assistance.
+A FastAPI application that integrates with Telegram using webhooks and OpenAI Agents SDK for AI-powered stock trading assistance, utilizing MCPHub for multiple MCP server management.
 
 ## Features
 
 - Telegram bot integration with webhook support
 - AI-powered stock analysis using OpenAI Agents SDK
-- Real-time stock data using yfinance
+- Multiple MCP server integration via MCPHub:
+  - Stock news analysis
+  - Volume wall detection
+- Real-time stock data analysis
 - Market news integration
 - Conversation history tracking
 - Trading context management
+- MongoDB integration for data persistence
+
+## Project Structure
+
+```
+├── app/
+│   ├── __init__.py
+│   ├── main.py           # FastAPI app with MCPHub initialization
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── telegram_webhook.py  # Telegram webhook endpoint
+│   ├── bot/
+│   │   ├── __init__.py
+│   │   ├── bot.py            # Bot instance and context management
+│   │   ├── agent.py          # AI agent implementation with MCP servers
+│   │   ├── context.py        # Conversation context and history
+│   │   └── telegram_handler.py  # Process incoming messages
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── settings.py   # Application settings
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── news.py           # News data models
+│   ├── services/
+│   │   ├── __init__.py
+│   │   └── mongodb_service.py # MongoDB operations
+│   └── startup.py        # Startup events
+```
 
 ## Setup
 
@@ -28,6 +59,12 @@ A FastAPI application that integrates with Telegram using webhooks and OpenAI Ag
    - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token from @BotFather
    - `TELEGRAM_WEBHOOK_URL`: The public URL where your bot will receive updates
    - `HOST` and `PORT`: Server configuration
+   - `AZURE_OPENAI_API_KEY`: Your Azure OpenAI API key
+   - `AZURE_OPENAI_ENDPOINT`: Your Azure OpenAI endpoint
+   - `AZURE_OPENAI_DEPLOYMENT`: Your Azure OpenAI deployment name
+   - `AZURE_OPENAI_API_VERSION`: Azure OpenAI API version
+   - `MONGO_URI`: MongoDB connection string
+   - `MONGO_DB`: MongoDB database name
 
 ## Running the Application
 
@@ -53,26 +90,7 @@ You can ask the bot about:
 - Stock analysis (e.g., "Analyze AAPL")
 - Market news (e.g., "What's the latest news about Tesla?")
 - Trading strategies (e.g., "What's your view on the current market?")
-
-## Development
-
-The project structure is organized as follows:
-
-```
-├── app/
-│   ├── __init__.py
-│   ├── main.py           # FastAPI app initialization
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── telegram_webhook.py  # Telegram webhook endpoint
-│   └── startup.py        # Startup events: register Telegram webhook URL
-├── bot/
-│   ├── __init__.py
-│   ├── bot.py            # Bot instance and context management
-│   ├── agent.py          # Bull Vision agent implementation
-│   ├── context.py        # Trading context and message history
-│   └── telegram_handler.py  # Process incoming messages
-```
+- Volume analysis (e.g., "Check volume patterns for MSFT")
 
 ## Development Commands
 
@@ -89,4 +107,6 @@ make check     # Run all checks
 
 ## Documentation
 
-For detailed instructions on setting up the AI Chatbot with Telegram and OpenAI Agents SDK, see [init_telegram_openai_agent.md](init_telegram_openai_agent.md). 
+For detailed instructions on:
+1. Setting up the AI Chatbot with Telegram and OpenAI Agents SDK, see [init_telegram_openai_agent.md](init_telegram_openai_agent.md)
+2. Using MCPHub with multiple MCP servers, see [create_telegram_chatbot_multi_mcp_server.md](create_telegram_chatbot_multi_mcp_server.md) 
