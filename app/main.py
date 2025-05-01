@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import contextlib
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,12 +26,12 @@ async def lifespan(app: FastAPI):
         app.state.mongo_db = mongo_client[settings.MONGO_DB]
         logger.info(f"MongoDB client initialized: {settings.MONGO_URI}")
 
-        # Create and maintain MCP server connection
-        async with hub.fetch_openai_mcp_server(
-            mcp_name="search-stock-news", cache_tools_list=True
-        ) as search_stock_news_mcp, hub.fetch_openai_mcp_server(mcp_name="volume-wall-detector", cache_tools_list=True) as volume_wall_detector_mcp:
-            app.state.mcp_servers = [search_stock_news_mcp, volume_wall_detector_mcp]
-            logger.info("MCP server initialized")
+        # Create and maintain MCP servers connection
+        servers = [hub.fetch_openai_mcp_server(mcp_name="search-stock-news", cache_tools_list=True),
+                   hub.fetch_openai_mcp_server(mcp_name="volume-wall-detector", cache_tools_list=True)]
+        async with contextlib.AsyncExitStack() as stack:
+            app.state.mcp_servers = [await stack.enter_async_context(server) for server in servers]
+            logger.info("MCP servers initialized")
 
             # Initialize other components
             await startup_event()
