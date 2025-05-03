@@ -6,7 +6,7 @@ async def user_has_portfolio(user_id: int, db: AsyncIOMotorDatabase) -> bool:
     Returns True if portfolio exists, False otherwise.
     """
     portfolio = await db.portfolios.find_one({"user_id": user_id})
-    return portfolio is not None 
+    return portfolio if portfolio is not None else None
 
 async def setup_portfolio(
     user_id: int,

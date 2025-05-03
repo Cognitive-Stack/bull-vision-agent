@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from agents import (
     Agent,
@@ -13,6 +14,7 @@ from mcphub import MCPHub
 from openai import AsyncAzureOpenAI
 
 from app.bot.context import TradingContext
+from app.bot.tools import get_stock_context
 from app.prompts.agent import BULL_VISION_PROMPT
 
 set_tracing_disabled(disabled=True)
@@ -35,20 +37,19 @@ set_default_openai_client(openai_client)
 
 
 class BullVisionAgent:
-    def __init__(self, context: TradingContext, servers=None, portfolio_context: dict = None, macroeconomic_seasonal_context: dict = None, stock_context: dict = None):
+    def __init__(self, context: TradingContext, servers=None, portfolio_context: dict = None):
         self.context = context
         self.servers = servers or []
         self.portfolio_context = portfolio_context or {}
-        self.macroeconomic_seasonal_context = macroeconomic_seasonal_context or {}
-        self.stock_context = stock_context or {}
 
     def get_prompt(self):
         # You can expand this to inject more fields as needed
-        return BULL_VISION_PROMPT.format(
+        prompt = BULL_VISION_PROMPT.format(
             portfolio_context=self.portfolio_context,
-            macroeconomic_seasonal_context=self.macroeconomic_seasonal_context,
-            stock_context=self.stock_context
+            current_date=datetime.now().strftime("%Y-%m-%d")
         )
+        logger.info(f"Prompt: {prompt}")
+        return prompt
 
     async def create_agent(self):
         return Agent[TradingContext](
@@ -59,6 +60,9 @@ class BullVisionAgent:
                 model=deployment,
                 openai_client=openai_client,
             ),
+            tools=[
+                get_stock_context,
+            ],
             mcp_servers=self.servers,
         )
 
