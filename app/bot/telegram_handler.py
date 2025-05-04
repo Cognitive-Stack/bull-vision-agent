@@ -86,6 +86,8 @@ def get_tool_call_output(result: Any, tool_name: str) -> Optional[Any]:
 
         # Find matching tool call output item with same call_id
         if tool_call_item:
+            logger.info(f"Tool call item name: {tool_call_item.raw_item.name}")
+            logger.info(f"Tool call item arguments: {tool_call_item.raw_item.arguments}")
             return next(
                 (item for item in result.new_items 
                  if item.type == "tool_call_output_item" 
@@ -126,10 +128,10 @@ async def handle_message(update: Update, servers, db):
         logger.info(f"Response: {response}")
 
         # Get search-stock-news tool output and store news if available
-        # search_stock_output_item = get_tool_call_output(result, "search-stock-news")
-        # if search_stock_output_item:
-        #     logger.info(f"Search stock output item: {search_stock_output_item}")
-        #     await news_controller.store_fetched_news(search_stock_output_item, db)
+        search_stock_output_item = get_tool_call_output(result, "search-stock-news")
+        if search_stock_output_item:
+            logger.info(f"Search stock output item: {search_stock_output_item}")
+            await news_controller.store_fetched_news(search_stock_output_item, db)
         
         # Get analyze-stock tool output and store news if available
         # analyze_stock_output_item = get_tool_call_output(result, "analyze-stock")
