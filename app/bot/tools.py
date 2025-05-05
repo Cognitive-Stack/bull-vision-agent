@@ -1,9 +1,11 @@
-from vnstock import Vnstock
+from vnstock import Vnstock, Listing, Trading, Company, Screener
 import pandas as pd
 from agents import function_tool
 from loguru import logger
+from vnstock.explorer.misc import vcb_exchange_rate, sjc_gold_price
 
 def calculate_rsi(data, period=14):
+    """Calculate the Relative Strength Index (RSI) for a given DataFrame of stock prices."""
     try:
         delta = data['close'].diff()
         gain = delta.where(delta > 0, 0).rolling(window=period).mean()
@@ -16,6 +18,7 @@ def calculate_rsi(data, period=14):
         return None
 
 def calculate_macd(data, fast=12, slow=26, signal=9):
+    """Calculate the MACD, signal line, and histogram for a given DataFrame of stock prices."""
     try:
         ema_fast = data['close'].ewm(span=fast, adjust=False).mean()
         ema_slow = data['close'].ewm(span=slow, adjust=False).mean()
@@ -71,17 +74,14 @@ def get_stock_context(symbol: str):
         logger.info(f"DF: {df}")
         df = df.rename(columns=str.lower)
 
-        # Calculate indicators
         df['RSI'] = calculate_rsi(df)
         macd, signal, hist = calculate_macd(df)
         df['MACD'] = macd
         df['MACD_signal'] = signal
         df['MACD_hist'] = hist
 
-        # Get latest row
         latest = df.iloc[-1] if not df.empty else {}
 
-        # Get company info
         company_df = stock.company.overview() if hasattr(stock, 'company') else None
         if company_df is not None and not company_df.empty:
             company = company_df.iloc[0].to_dict()
@@ -110,3 +110,196 @@ def get_stock_context(symbol: str):
     except Exception as e:
         logger.error(f"Error getting stock context for {symbol}: {str(e)}")
         return None
+
+@function_tool
+def get_all_symbols():
+    """
+    Get a list of all available stock symbols on the Vietnamese market.
+
+    Returns:
+        list: List of ticker symbols.
+    """
+    try:
+        listing = Listing()
+        return listing.all_symbols()
+    except Exception as e:
+        logger.error(f"Error in get_all_symbols: {str(e)}")
+        return []
+
+@function_tool
+def get_price_board(symbols):
+    """
+    Get real-time price board for a list of ticker symbols.
+
+    Args:
+        symbols (list): List of ticker strings, e.g. ['VCB', 'ACB', 'TCB']
+
+    Returns:
+        DataFrame: Real-time price board data.
+    """
+    try:
+        board = Trading(source='VCI').price_board(symbols)
+        return board
+    except Exception as e:
+        logger.error(f"Error in get_price_board: {str(e)}")
+        return None
+
+@function_tool
+def get_company_overview(symbol):
+    """
+    Get detailed company overview information for a given symbol.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+
+    Returns:
+        DataFrame: Company overview data.
+    """
+    try:
+        company = Company(symbol=symbol, source='VCI')
+        return company.overview()
+    except Exception as e:
+        logger.error(f"Error in get_company_overview: {str(e)}")
+        return None
+
+@function_tool
+def get_balance_sheet(symbol, period='year', lang='en'):
+    """
+    Get the balance sheet for a company.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+        period (str): 'year' or 'quarter'.
+        lang (str): Language, 'en' or 'vi'.
+
+    Returns:
+        DataFrame: Balance sheet data.
+    """
+    try:
+        stock = Vnstock().stock(symbol=symbol, source='VCI')
+        return stock.finance.balance_sheet(period=period, lang=lang, dropna=True)
+    except Exception as e:
+        logger.error(f"Error in get_balance_sheet: {str(e)}")
+        return None
+
+@function_tool
+def get_income_statement(symbol, period='year', lang='en'):
+    """
+    Get the income statement for a company.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+        period (str): 'year' or 'quarter'.
+        lang (str): Language, 'en' or 'vi'.
+
+    Returns:
+        DataFrame: Income statement data.
+    """
+    stock = Vnstock().stock(symbol=symbol, source='VCI')
+    return stock.finance.income_statement(period=period, lang=lang, dropna=True)
+
+@function_tool
+def get_cash_flow(symbol, period='year'):
+    """
+    Get the cash flow statement for a company.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+        period (str): 'year' or 'quarter'.
+
+    Returns:
+        DataFrame: Cash flow data.
+    """
+    stock = Vnstock().stock(symbol=symbol, source='VCI')
+    return stock.finance.cash_flow(period=period, dropna=True)
+
+@function_tool
+def get_financial_ratios(symbol, period='year', lang='en'):
+    """
+    Get financial ratios for a company.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+        period (str): 'year' or 'quarter'.
+        lang (str): Language, 'en' or 'vi'.
+
+    Returns:
+        DataFrame: Financial ratios data.
+    """
+    stock = Vnstock().stock(symbol=symbol, source='VCI')
+    return stock.finance.ratio(period=period, lang=lang, dropna=True)
+
+@function_tool
+def get_market_indices():
+    """
+    Get real-time data for major Vietnamese market indices (VNIndex, HNX, UPCOM).
+
+    Returns:
+        DataFrame: Indices price board data.
+    """
+    return Trading(source='VCI').price_board(['VNINDEX', 'HNX', 'UPCOM'])
+
+@function_tool
+def screen_stocks(params=None, limit=100):
+    """
+    Screen stocks based on custom parameters.
+
+    Args:
+        params (dict): Screening parameters, e.g. {"exchangeName": "HOSE,HNX,UPCOM"}
+        limit (int): Maximum number of results.
+
+    Returns:
+        DataFrame: Screener results.
+    """
+    screener = Screener()
+    return screener.stock(params=params or {"exchangeName": "HOSE,HNX,UPCOM"}, limit=limit)
+
+@function_tool
+def get_intraday_ticks(symbol, page_size=10000):
+    """
+    Get intraday tick data for a stock.
+
+    Args:
+        symbol (str): The stock ticker symbol.
+        page_size (int): Number of ticks to fetch.
+
+    Returns:
+        DataFrame: Intraday tick data.
+    """
+    stock = Vnstock().stock(symbol=symbol, source='VCI')
+    return stock.quote.intraday(symbol=symbol, page_size=page_size, show_log=False)
+
+@function_tool
+def get_fund_listings():
+    """
+    Get a list of all mutual funds listed on the Vietnamese market.
+
+    Returns:
+        DataFrame: Fund listing data.
+    """
+    from vnstock.explorer.fmarket.fund import Fund
+    fund = Fund()
+    return fund.listing()
+
+@function_tool
+def get_vcb_exchange_rate(date):
+    """
+    Get the VCB exchange rate for a specific date.
+
+    Args:
+        date (str): Date in 'YYYY-MM-DD' format.
+
+    Returns:
+        DataFrame: Exchange rate data.
+    """
+    return vcb_exchange_rate(date=date)
+
+@function_tool
+def get_sjc_gold_price():
+    """
+    Get the current SJC gold price.
+
+    Returns:
+        DataFrame: Gold price data.
+    """
+    return sjc_gold_price()

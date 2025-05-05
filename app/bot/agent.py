@@ -14,7 +14,22 @@ from mcphub import MCPHub
 from openai import AsyncAzureOpenAI
 
 from app.bot.context import TradingContext
-from app.bot.tools import get_stock_context
+from app.bot.tools import (
+    get_all_symbols,
+    get_balance_sheet,
+    get_cash_flow,
+    get_company_overview,
+    get_financial_ratios,
+    get_fund_listings,
+    get_income_statement,
+    get_intraday_ticks,
+    get_market_indices,
+    get_price_board,
+    get_sjc_gold_price,
+    get_stock_context,
+    get_vcb_exchange_rate,
+    screen_stocks,
+)
 from app.prompts.agent import BULL_VISION_PROMPT
 
 set_tracing_disabled(disabled=True)
@@ -62,6 +77,19 @@ class BullVisionAgent:
             ),
             tools=[
                 get_stock_context,
+                get_all_symbols,
+                get_price_board,
+                get_company_overview,
+                get_balance_sheet,
+                get_income_statement,
+                get_cash_flow,
+                get_financial_ratios,
+                get_market_indices,
+                screen_stocks,
+                get_intraday_ticks,
+                get_fund_listings,
+                get_vcb_exchange_rate,
+                get_sjc_gold_price,
             ],
             mcp_servers=self.servers,
         )
