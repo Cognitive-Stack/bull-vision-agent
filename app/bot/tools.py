@@ -1,8 +1,10 @@
-from vnstock import Vnstock, Listing, Trading, Company, Screener
 import pandas as pd
 from agents import function_tool
 from loguru import logger
-from vnstock.explorer.misc import vcb_exchange_rate, sjc_gold_price
+from vnstock import Company, Listing, Screener, Trading, Vnstock
+from vnstock.explorer.fmarket.fund import Fund
+from vnstock.explorer.misc import sjc_gold_price, vcb_exchange_rate
+
 
 def calculate_rsi(data, period=14):
     """Calculate the Relative Strength Index (RSI) for a given DataFrame of stock prices."""
@@ -195,8 +197,12 @@ def get_income_statement(symbol, period='year', lang='en'):
     Returns:
         DataFrame: Income statement data.
     """
-    stock = Vnstock().stock(symbol=symbol, source='VCI')
-    return stock.finance.income_statement(period=period, lang=lang, dropna=True)
+    try:
+        stock = Vnstock().stock(symbol=symbol, source='VCI')
+        return stock.finance.income_statement(period=period, lang=lang, dropna=True)
+    except Exception as e:
+        logger.error(f"Error in get_income_statement for {symbol}: {str(e)}")
+        return None
 
 @function_tool
 def get_cash_flow(symbol, period='year'):
@@ -210,8 +216,12 @@ def get_cash_flow(symbol, period='year'):
     Returns:
         DataFrame: Cash flow data.
     """
-    stock = Vnstock().stock(symbol=symbol, source='VCI')
-    return stock.finance.cash_flow(period=period, dropna=True)
+    try:
+        stock = Vnstock().stock(symbol=symbol, source='VCI')
+        return stock.finance.cash_flow(period=period, dropna=True)
+    except Exception as e:
+        logger.error(f"Error in get_cash_flow for {symbol}: {str(e)}")
+        return None
 
 @function_tool
 def get_financial_ratios(symbol, period='year', lang='en'):
@@ -226,18 +236,36 @@ def get_financial_ratios(symbol, period='year', lang='en'):
     Returns:
         DataFrame: Financial ratios data.
     """
-    stock = Vnstock().stock(symbol=symbol, source='VCI')
-    return stock.finance.ratio(period=period, lang=lang, dropna=True)
+    try:
+        stock = Vnstock().stock(symbol=symbol, source='VCI')
+        return stock.finance.ratio(period=period, lang=lang, dropna=True)
+    except Exception as e:
+        logger.error(f"Error in get_financial_ratios for {symbol}: {str(e)}")
+        return None
 
 @function_tool
-def get_market_indices():
+def get_market_indices(symbols=None):
     """
-    Get real-time data for major Vietnamese market indices (VNIndex, HNX, UPCOM).
+    Get real-time data for market indices.
+
+    Args:
+        symbols (list): List of index symbols to fetch. Defaults to ['VCB','ACB','TCB','BID'].
 
     Returns:
         DataFrame: Indices price board data.
     """
-    return Trading(source='VCI').price_board(['VNINDEX', 'HNX', 'UPCOM'])
+    try:
+        default_symbols = ['VCB','ACB','TCB','BID']
+        symbols_to_fetch = symbols if symbols is not None else default_symbols
+        
+        if not isinstance(symbols_to_fetch, list):
+            logger.error(f"Invalid symbols parameter: {symbols_to_fetch}. Expected a list.")
+            return None
+            
+        return Trading(source='VCI', show_log=True).price_board(symbols_to_fetch)
+    except Exception as e:
+        logger.error(f"Error in get_market_indices for symbols {symbols_to_fetch}: {str(e)}")
+        return None
 
 @function_tool
 def screen_stocks(params=None, limit=100):
@@ -251,8 +279,12 @@ def screen_stocks(params=None, limit=100):
     Returns:
         DataFrame: Screener results.
     """
-    screener = Screener()
-    return screener.stock(params=params or {"exchangeName": "HOSE,HNX,UPCOM"}, limit=limit)
+    try:
+        screener = Screener()
+        return screener.stock(params=params or {"exchangeName": "HOSE,HNX,UPCOM"}, limit=limit)
+    except Exception as e:
+        logger.error(f"Error in screen_stocks: {str(e)}")
+        return None
 
 @function_tool
 def get_intraday_ticks(symbol, page_size=10000):
@@ -266,8 +298,12 @@ def get_intraday_ticks(symbol, page_size=10000):
     Returns:
         DataFrame: Intraday tick data.
     """
-    stock = Vnstock().stock(symbol=symbol, source='VCI')
-    return stock.quote.intraday(symbol=symbol, page_size=page_size, show_log=False)
+    try:
+        stock = Vnstock().stock(symbol=symbol, source='VCI')
+        return stock.quote.intraday(symbol=symbol, page_size=page_size, show_log=False)
+    except Exception as e:
+        logger.error(f"Error in get_intraday_ticks for {symbol}: {str(e)}")
+        return None
 
 @function_tool
 def get_fund_listings():
@@ -277,9 +313,12 @@ def get_fund_listings():
     Returns:
         DataFrame: Fund listing data.
     """
-    from vnstock.explorer.fmarket.fund import Fund
-    fund = Fund()
-    return fund.listing()
+    try:
+        fund = Fund()
+        return fund.listing()
+    except Exception as e:
+        logger.error(f"Error in get_fund_listings: {str(e)}")
+        return None
 
 @function_tool
 def get_vcb_exchange_rate(date):
@@ -292,7 +331,11 @@ def get_vcb_exchange_rate(date):
     Returns:
         DataFrame: Exchange rate data.
     """
-    return vcb_exchange_rate(date=date)
+    try:
+        return vcb_exchange_rate(date=date)
+    except Exception as e:
+        logger.error(f"Error in get_vcb_exchange_rate for date {date}: {str(e)}")
+        return None
 
 @function_tool
 def get_sjc_gold_price():
@@ -302,4 +345,78 @@ def get_sjc_gold_price():
     Returns:
         DataFrame: Gold price data.
     """
-    return sjc_gold_price()
+    try:
+        return sjc_gold_price()
+    except Exception as e:
+        logger.error(f"Error in get_sjc_gold_price: {str(e)}")
+        return None
+
+SUPPORTED_INDUSTRIES = {
+    "Banks",
+    "Basic Resources",
+    "Chemicals",
+    "Construction & Materials",
+    "Financial Services",
+    "Food & Beverage",
+    "Health Care",
+    "Industrial Goods & Services",
+    "Insurance",
+    "Media",
+    "Personal & Household Goods",
+    "Real Estate",
+    "Retail",
+    "Telecommunications",
+    "Travel & Leisure",
+    "Utilities"
+}
+
+@function_tool
+async def get_stocks_by_industry(industry: str) -> str:
+    """
+    Get all stock symbols in a specific industry.
+
+    Args:
+        industry: The industry name to filter by (must be in SUPPORTED_INDUSTRIES).
+
+    Returns:
+        str: 
+            - If the industry is supported and stocks are found: a formatted string listing stocks in the specified industry, including ticker, exchange, industry, market cap, and price.
+            - If the industry is not supported: a message stating the industry is not supported and listing all supported industries.
+            - If no stocks are found: a message stating no stocks were found in the specified industry.
+            - If an error occurs: a message indicating an error occurred during the search.
+    """
+    try:
+        # Check if the industry is supported
+        if industry not in SUPPORTED_INDUSTRIES:
+            return (
+                f"Ngành '{industry}' hiện chưa được hỗ trợ. "
+                "Vui lòng chọn một trong các ngành sau:\n"
+                + "\n".join(f"• {name}" for name in sorted(SUPPORTED_INDUSTRIES))
+            )
+
+        # Use screen_stocks to filter by industry
+        params = {
+            'industryName': industry.replace('&', '\u0026')
+        }
+        screener = Screener()
+        result = screener.stock(params=params or {"exchangeName": "HOSE,HNX,UPCOM"}, limit=100)
+        if result is None or result.empty:
+            return f"Không tìm thấy cổ phiếu nào trong ngành {industry}"
+        
+        # Format the response
+        response = f"*Danh sách cổ phiếu ngành {industry}:*\n\n"
+        # Get all columns from the dataframe
+        for _, row in result.iterrows():
+            response += f"• {row['ticker']}\n"
+            response += f"  - Exchange: {row['exchange']}\n"
+            response += f"  - Industry: {row['industry']}\n"
+            if pd.notna(row['market_cap']):
+                response += f"  - Market Cap: {row['market_cap']} billion VND\n"
+            if pd.notna(row['price_near_realtime']):
+                response += f"  - Price: {row['price_near_realtime']} VND\n"
+            response += "\n"
+        return response
+
+    except Exception as e:
+        logger.error(f"Error getting stocks by industry: {e}")
+        return f"Có lỗi xảy ra khi tìm kiếm cổ phiếu ngành {industry}"

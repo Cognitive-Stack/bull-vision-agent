@@ -27,10 +27,12 @@ from app.bot.tools import (
     get_price_board,
     get_sjc_gold_price,
     get_stock_context,
+    get_stocks_by_industry,
     get_vcb_exchange_rate,
     screen_stocks,
 )
 from app.prompts.agent import BULL_VISION_PROMPT
+from app.prompts.trading_expert import TRADING_EXPERT_PROMPT
 from app.core.settings import get_settings
 
 set_tracing_disabled(disabled=True)
@@ -76,6 +78,36 @@ class BullVisionAgent:
 
     async def create_agent(self):
         try:
+            # Create the trading expert sub-agent
+            trading_expert = Agent[TradingContext](
+                name="Trading Expert",
+                instructions=self.get_trading_expert_prompt(),
+                output_type=str,
+                model=OpenAIChatCompletionsModel(
+                    model=deployment,
+                    openai_client=openai_client,
+                ),
+                tools=[
+                    get_stock_context,
+                    get_all_symbols,
+                    get_price_board,
+                    get_company_overview,
+                    get_balance_sheet,
+                    get_income_statement,
+                    get_cash_flow,
+                    get_financial_ratios,
+                    get_market_indices,
+                    screen_stocks,
+                    get_intraday_ticks,
+                    get_fund_listings,
+                    get_vcb_exchange_rate,
+                    get_sjc_gold_price,
+                    get_stocks_by_industry,
+                ],
+                mcp_servers=self.servers,
+            )
+
+            # Create the main Bull Vision agent with trading expert as a handoff
             return Agent[TradingContext](
                 name="Bull Vision",
                 instructions=self.get_prompt(),
@@ -99,12 +131,28 @@ class BullVisionAgent:
                     get_fund_listings,
                     get_vcb_exchange_rate,
                     get_sjc_gold_price,
+                    get_stocks_by_industry,
                 ],
+                handoffs=[trading_expert],
                 mcp_servers=self.servers,
             )
         except Exception as e:
             logger.error(f"Error creating agent: {e}")
             return None
+
+    def get_trading_expert_prompt(self) -> str:
+        """Get the prompt for the trading expert agent."""
+        try:
+            prompt = TRADING_EXPERT_PROMPT.format(
+                profile_context=self.profile_context,
+                portfolio_context=self.portfolio_context,
+                current_date=datetime.now().strftime("%Y-%m-%d")
+            )
+            logger.info(f"Trading Expert Prompt: {prompt}")
+            return prompt
+        except Exception as e:
+            logger.error(f"Error generating trading expert prompt: {e}")
+            return "Sorry, there was an error generating the trading expert prompt."
 
     async def run(self, input_text: str):
         try:
