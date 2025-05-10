@@ -1,29 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
+from telegram import Update
 
-from app.bot.telegram_handler import handle_telegram_update
 from app.schemas.telegram import TelegramWebhookRequest, TelegramWebhookResponse
+from app.services.telegram import telegram_handler
 
 router = APIRouter()
-
 
 async def get_mcp_server(request: Request):
     return request.app.state.mcp_servers
 
-
 async def get_mongo_db(request: Request):
     return request.app.state.mongo_db
 
+async def get_telegram_bot(request: Request):
+    return request.app.state.telegram_bot
 
 @router.post("/telegram/webhook", response_model=TelegramWebhookResponse)
 async def telegram_webhook(
-    request: Request, servers=Depends(get_mcp_server), db=Depends(get_mongo_db)
+    request: Request,
+    servers=Depends(get_mcp_server),
+    db=Depends(get_mongo_db),
+    telegram_bot=Depends(get_telegram_bot),
 ):
     try:
+        # Set MCP servers in the handler
+        telegram_handler.set_mcp_servers(servers)
+        
         update = await request.json()
         # Validate request data
         webhook_request = TelegramWebhookRequest(**update)
-        await handle_telegram_update(update, servers, db)
+        
+        # Pass db to handle_update
+        await telegram_handler.handle_update(Update.de_json(update, telegram_bot), None, db)
+        
         return TelegramWebhookResponse(
             message="Webhook processed successfully",
             data={"update_id": webhook_request.update_id},

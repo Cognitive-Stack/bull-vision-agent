@@ -1,15 +1,29 @@
-import os
 from functools import lru_cache
 
+from pydantic_settings import BaseSettings
 
-class Settings:
-    MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
-    MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
-    MONGO_USER: str = os.getenv("MONGO_USER", "")
-    MONGO_PASS: str = os.getenv("MONGO_PASS", "")
-    MONGO_DB: str = os.getenv("MONGO_DB", "mydb")
-    MONGO_AUTH_SOURCE: str = os.getenv("MONGO_AUTH_SOURCE", "admin")
-    MONGO_AUTH_MECHANISM: str = os.getenv("MONGO_AUTH_MECHANISM", "SCRAM-SHA-256")
+
+class Settings(BaseSettings):
+    TELEGRAM_BOT_TOKEN: str
+    TELEGRAM_WEBHOOK_URL: str
+    HOST: str = "localhost"
+    PORT: int = 8000
+
+    AZURE_OPENAI_ENDPOINT: str
+    AZURE_OPENAI_API_KEY: str
+    AZURE_OPENAI_DEPLOYMENT: str
+    AZURE_OPENAI_API_VERSION: str
+
+    MONGO_HOST: str
+    MONGO_PORT: int
+    MONGO_USER: str
+    MONGO_PASS: str
+    MONGO_DB: str
+    MONGO_AUTH_SOURCE: str
+    MONGO_AUTH_MECHANISM: str
+
+    class Config:
+        env_file = ".env"
 
     @property
     def MONGO_URI(self) -> str:

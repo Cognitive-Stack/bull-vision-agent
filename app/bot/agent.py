@@ -31,70 +31,88 @@ from app.bot.tools import (
     screen_stocks,
 )
 from app.prompts.agent import BULL_VISION_PROMPT
+from app.core.settings import get_settings
 
 set_tracing_disabled(disabled=True)
-load_dotenv()
 
 # Initialize MCPHub
 hub = MCPHub()
 
+# Use get_settings to access environment variables
+settings = get_settings()
+
 # Azure OpenAI configuration
-deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+deployment = settings.AZURE_OPENAI_DEPLOYMENT
 
 openai_client = AsyncAzureOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+    api_key=settings.AZURE_OPENAI_API_KEY,
+    api_version=settings.AZURE_OPENAI_API_VERSION,
+    azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+    azure_deployment=settings.AZURE_OPENAI_DEPLOYMENT,
 )
 
 set_default_openai_client(openai_client)
 
 
 class BullVisionAgent:
-    def __init__(self, context: TradingContext, servers=None, portfolio_context: dict = None):
+    def __init__(self, context: TradingContext, servers=None, portfolio_context: dict = None, profile_context: dict = None):
         self.context = context
         self.servers = servers or []
         self.portfolio_context = portfolio_context or {}
+        self.profile_context = profile_context or {}
 
     def get_prompt(self):
-        # You can expand this to inject more fields as needed
-        prompt = BULL_VISION_PROMPT.format(
-            portfolio_context=self.portfolio_context,
-            current_date=datetime.now().strftime("%Y-%m-%d")
-        )
-        logger.info(f"Prompt: {prompt}")
-        return prompt
+        try:
+            prompt = BULL_VISION_PROMPT.format(
+                profile_context=self.profile_context,
+                portfolio_context=self.portfolio_context,
+                current_date=datetime.now().strftime("%Y-%m-%d")
+            )
+            logger.info(f"Prompt: {prompt}")
+            return prompt
+        except Exception as e:
+            logger.error(f"Error generating prompt: {e}")
+            return "Sorry, there was an error generating the prompt."
 
     async def create_agent(self):
-        return Agent[TradingContext](
-            name="Bull Vision",
-            instructions=self.get_prompt(),
-            output_type=str,
-            model=OpenAIChatCompletionsModel(
-                model=deployment,
-                openai_client=openai_client,
-            ),
-            tools=[
-                get_stock_context,
-                get_all_symbols,
-                get_price_board,
-                get_company_overview,
-                get_balance_sheet,
-                get_income_statement,
-                get_cash_flow,
-                get_financial_ratios,
-                get_market_indices,
-                screen_stocks,
-                get_intraday_ticks,
-                get_fund_listings,
-                get_vcb_exchange_rate,
-                get_sjc_gold_price,
-            ],
-            mcp_servers=self.servers,
-        )
+        try:
+            return Agent[TradingContext](
+                name="Bull Vision",
+                instructions=self.get_prompt(),
+                output_type=str,
+                model=OpenAIChatCompletionsModel(
+                    model=deployment,
+                    openai_client=openai_client,
+                ),
+                tools=[
+                    get_stock_context,
+                    get_all_symbols,
+                    get_price_board,
+                    get_company_overview,
+                    get_balance_sheet,
+                    get_income_statement,
+                    get_cash_flow,
+                    get_financial_ratios,
+                    get_market_indices,
+                    screen_stocks,
+                    get_intraday_ticks,
+                    get_fund_listings,
+                    get_vcb_exchange_rate,
+                    get_sjc_gold_price,
+                ],
+                mcp_servers=self.servers,
+            )
+        except Exception as e:
+            logger.error(f"Error creating agent: {e}")
+            return None
 
     async def run(self, input_text: str):
-        agent = await self.create_agent()
-        return await Runner.run(starting_agent=agent, input=input_text, context=self.context)
+        try:
+            agent = await self.create_agent()
+            if agent is None:
+                return "Sorry, there was an error initializing the agent."
+            return await Runner.run(starting_agent=agent, input=input_text, context=self.context)
+        except Exception as e:
+            logger.error(f"Error running agent: {e}")
+            return "Sorry, there was an error processing your request."
 

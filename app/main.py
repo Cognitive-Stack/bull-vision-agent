@@ -1,15 +1,15 @@
-from contextlib import asynccontextmanager
 import contextlib
+from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from mcphub import MCPHub
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.api.telegram_webhook import router as telegram_router
+from app.bot.bot import bot  # Import the bot instance
 from app.core.settings import get_settings
-from app.startup import startup_event
 
 # Initialize MCPHub
 hub = MCPHub()
@@ -33,8 +33,15 @@ async def lifespan(app: FastAPI):
             app.state.mcp_servers = [await stack.enter_async_context(server) for server in servers]
             logger.info("MCP servers initialized")
 
-            # Initialize other components
-            await startup_event()
+            # Set webhook using the Bot instance
+            webhook_url = settings.TELEGRAM_WEBHOOK_URL
+            if not webhook_url:
+                logger.error("TELEGRAM_WEBHOOK_URL not set in environment variables")
+            else:
+                await bot.set_webhook(url=webhook_url)
+                logger.info(f"Successfully registered webhook URL: {webhook_url}")
+
+            app.state.telegram_bot = bot  # Store the bot instance in app.state if needed
             yield
 
     except Exception as e:

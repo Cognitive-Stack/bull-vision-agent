@@ -132,7 +132,10 @@ For each trade opportunity, consider:
 ### Current date/time:
 {current_date}
 
-### Portfolio Context
+### User Profile Context
+{profile_context}
+
+### User Portfolio Context
 {portfolio_context}
 
 ---
