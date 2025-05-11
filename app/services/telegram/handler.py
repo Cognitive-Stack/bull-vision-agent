@@ -92,11 +92,8 @@ class TelegramHandler:
                 portfolio_context=portfolio,
                 profile_context=profile
             )
-            result = await agent.run(update.message.text)
-            response = result.final_output
+            response = await agent.run(update.message.text)
             logger.info(f"Response: {response}")
-
-            # logger.info(f"User context messages:\n{user_context.get_conversation_history()}")
 
             # Send the response back to the user
             await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)

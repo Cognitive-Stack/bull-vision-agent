@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
-
+from typing import List, Optional
+from dataclasses import dataclass
+from loguru import logger
 from agents import (
     Agent,
     OpenAIChatCompletionsModel,
@@ -8,7 +10,6 @@ from agents import (
     set_default_openai_client,
     set_tracing_disabled,
 )
-from dotenv import load_dotenv
 from loguru import logger
 from mcphub import MCPHub
 from openai import AsyncAzureOpenAI
@@ -33,6 +34,7 @@ from app.bot.tools import (
 )
 from app.prompts.agent import BULL_VISION_PROMPT
 from app.prompts.trading_expert import TRADING_EXPERT_PROMPT
+from app.prompts.user_input import USER_INPUT_TEMPLATE
 from app.core.settings import get_settings
 
 set_tracing_disabled(disabled=True)
@@ -55,6 +57,13 @@ openai_client = AsyncAzureOpenAI(
 
 set_default_openai_client(openai_client)
 
+@dataclass
+class ConversationMessage:
+    """Represents a single message in the conversation history."""
+    timestamp: datetime
+    input_text: str
+    response: str
+    error: Optional[str] = None
 
 class BullVisionAgent:
     def __init__(self, context: TradingContext, servers=None, portfolio_context: dict = None, profile_context: dict = None):
@@ -62,6 +71,47 @@ class BullVisionAgent:
         self.servers = servers or []
         self.portfolio_context = portfolio_context or {}
         self.profile_context = profile_context or {}
+        self._conversation_history: List[ConversationMessage] = []
+        self._max_history_size = 10
+
+    @property
+    def conversation_history(self) -> List[ConversationMessage]:
+        """Get the conversation history."""
+        return self._conversation_history
+
+    def _add_to_history(self, message: ConversationMessage) -> None:
+        """Add a message to the conversation history, maintaining the size limit."""
+        try:
+            self._conversation_history.append(message)
+            if len(self._conversation_history) > self._max_history_size:
+                self._conversation_history = self._conversation_history[-self._max_history_size:]
+        except Exception as e:
+            logger.error(f"Error adding message to history: {e}")
+
+    def _format_conversation_history(self) -> str:
+        """Format the conversation history for the input template."""
+        if not self._conversation_history:
+            return "No previous conversation history."
+            
+        formatted_history = []
+        for msg in self._conversation_history:
+            formatted_history.append(
+                f"Time: {msg.timestamp.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"User: {msg.input_text}\n"
+                f"Assistant: {msg.response}\n"
+            )
+        return "\n".join(formatted_history)
+
+    def _format_user_input(self, input_text: str) -> str:
+        """Format the user input with conversation history and context."""
+        try:
+            return USER_INPUT_TEMPLATE.format(
+                conversation_history=self._format_conversation_history(),
+                current_input=input_text
+            )
+        except Exception as e:
+            logger.error(f"Error formatting user input: {e}")
+            return input_text
 
     def get_prompt(self):
         try:
@@ -154,12 +204,38 @@ class BullVisionAgent:
             logger.error(f"Error generating trading expert prompt: {e}")
             return "Sorry, there was an error generating the trading expert prompt."
 
-    async def run(self, input_text: str):
+    async def run(self, input_text: str) -> str:
+        """
+        Run the agent with the given input text and track the conversation.
+        
+        Args:
+            input_text: The user's input text
+            
+        Returns:
+            str: The agent's response
+        """
         try:
             agent = await self.create_agent()
             if agent is None:
-                return "Sorry, there was an error initializing the agent."
-            return await Runner.run(starting_agent=agent, input=input_text, context=self.context)
+                error_msg = "Sorry, there was an error initializing the agent."
+                return error_msg
+
+            # Format input with conversation history
+            formatted_input = self._format_user_input(input_text)
+            logger.info(f"Formatted input: {formatted_input}")
+            
+            # Run the agent with formatted input
+            response = await Runner.run(starting_agent=agent, input=formatted_input, context=self.context)
+            
+            # Add successful conversation to history
+            self._add_to_history(ConversationMessage(
+                timestamp=datetime.now(),
+                input_text=input_text,
+                response=response.final_output
+            ))
+            
+            return response.final_output
+            
         except Exception as e:
             logger.error(f"Error running agent: {e}")
             return "Sorry, there was an error processing your request."
