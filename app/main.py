@@ -26,6 +26,10 @@ async def lifespan(app: FastAPI):
         app.state.mongo_db = mongo_client[settings.MONGO_DB]
         logger.info(f"MongoDB client initialized: {settings.MONGO_URI}")
 
+        # Initialize user agents dictionary
+        app.state.user_agents = {}
+        logger.info("User agents dictionary initialized")
+
         # Create and maintain MCP servers connection
         servers = [hub.fetch_openai_mcp_server(mcp_name="search-stock-news", cache_tools_list=True),
                    hub.fetch_openai_mcp_server(mcp_name="volume-wall-detector", cache_tools_list=True)]

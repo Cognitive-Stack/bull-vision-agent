@@ -16,12 +16,16 @@ async def get_mongo_db(request: Request):
 async def get_telegram_bot(request: Request):
     return request.app.state.telegram_bot
 
+async def get_user_agents(request: Request):
+    return request.app.state.user_agents
+
 @router.post("/telegram/webhook", response_model=TelegramWebhookResponse)
 async def telegram_webhook(
     request: Request,
     servers=Depends(get_mcp_server),
     db=Depends(get_mongo_db),
     telegram_bot=Depends(get_telegram_bot),
+    user_agents=Depends(get_user_agents),
 ):
     try:
         # Set MCP servers in the handler
@@ -31,8 +35,8 @@ async def telegram_webhook(
         # Validate request data
         webhook_request = TelegramWebhookRequest(**update)
         
-        # Pass db to handle_update
-        await telegram_handler.handle_update(Update.de_json(update, telegram_bot), None, db)
+        # Pass db and user_agents to handle_update
+        await telegram_handler.handle_update(Update.de_json(update, telegram_bot), None, db, user_agents)
         
         return TelegramWebhookResponse(
             message="Webhook processed successfully",

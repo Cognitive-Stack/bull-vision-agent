@@ -4,6 +4,7 @@ from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
+from fastapi import FastAPI
 
 from app.bot.agent import BullVisionAgent
 from app.bot.bot import bot
@@ -17,24 +18,23 @@ from app.controllers.portfolio import (
 
 
 class TelegramHandler:
-    def __init__(self):
-        self.bot = bot
-        self.portfolio_setup_states: Dict[int, Dict[str, Any]] = {}
-        self.profile_setup_states: Dict[int, Dict[str, Any]] = {}
-        self.mcp_servers = None
+    def __init__(self, mcp_servers=None):
+        self.mcp_servers = mcp_servers or []
+        self.portfolio_setup_states = {}
+        self.profile_setup_states = {}
 
     def set_mcp_servers(self, servers):
         """Set MCP servers for the handler"""
         self.mcp_servers = servers
 
-    async def handle_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE, db=None) -> None:
+    async def handle_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE, db=None, user_agents=None) -> None:
         """Main entry point for handling Telegram updates"""
         try:
             if update.message:
                 if update.message.text and update.message.text.startswith('/'):
                     await self.handle_command(update, context)
                 else:
-                    await self.handle_message(update, context, db)
+                    await self.handle_message(update, context, db, user_agents)
             elif update.callback_query:
                 await self.handle_callback_query(update.callback_query, context, db)
         except Exception as e:
@@ -59,7 +59,7 @@ class TelegramHandler:
             logger.error(f"Error handling command: {str(e)}")
             await self._send_error_message(update, "An error occurred while processing your command.")
 
-    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE, db=None) -> None:
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE, db=None, user_agents=None) -> None:
         """Handle regular messages"""
         try:
             user_id = update.effective_user.id
@@ -85,13 +85,21 @@ class TelegramHandler:
 
             # Get user context
             user_context = get_user_context(user_id)
-            # Create agent and process message
-            agent = BullVisionAgent(
-                context=user_context,
-                servers=self.mcp_servers,
-                portfolio_context=portfolio,
-                profile_context=profile
-            )
+            
+            # Get or create user agent
+            if user_id not in user_agents:
+                user_agents[user_id] = BullVisionAgent(
+                    context=user_context,
+                    servers=self.mcp_servers,
+                    portfolio_context=portfolio,
+                    profile_context=profile
+                )
+                logger.info(f"Created new agent for user {user_id}")
+            
+            # Get the user's agent
+            agent = user_agents[user_id]
+            
+            # Process message
             response = await agent.run(update.message.text)
             logger.info(f"Response: {response}")
 
