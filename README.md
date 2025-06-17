@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/cognitive-stack-bull-vision-agent-badge.png)](https://mseep.ai/app/cognitive-stack-bull-vision-agent)
+
 # Bull Vision Agent
 
 A FastAPI application that integrates with Telegram using webhooks and OpenAI Agents SDK for AI-powered stock trading assistance, utilizing MCPHub for multiple MCP server management.
